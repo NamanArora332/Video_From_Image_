@@ -53,8 +53,21 @@ def generate_narration(text, output_path):
     except Exception as e:
         print(f"Error generating narration: {e}")
         return False
+    
 
-def create_video(image_path, music_path, narration_path, output_video, duration=5):
+def create_subtitles(text, output_path):
+    """Generate SRT subtitle file"""
+    try:
+        with open(output_path, 'w') as f:
+            f.write("1\n")
+            f.write("00:00:00,000 --> 00:00:05,000\n")
+            f.write(f"{text}\n")
+        return True
+    except Exception as e:
+        print(f"Error creating subtitles: {e}")
+        return False
+
+def create_video(image_path, music_path, narration_path, subtitle_path,output_video, duration=5):
     """Create a video with image and audio"""
     try:
 
@@ -70,6 +83,7 @@ def create_video(image_path, music_path, narration_path, output_video, duration=
         '-map', '[a]',           # Map the mixed audio
         '-c:v', 'libx264',
         '-t', str(duration),
+        '-vf', f"subtitles={subtitle_path}:force_style='Fontsize=24'",
         '-pix_fmt', 'yuv420p',
         '-c:a', 'aac',
         output_video
@@ -83,26 +97,34 @@ def create_video(image_path, music_path, narration_path, output_video, duration=
 
 
 def main():
-    input_image = "files/input.png"
-    processed_image = "files/output.png"
-    music_file = "files/background_music.mp3"
+    config = {
+        'input_image': 'files/input.png',
+        'music_file': 'files/background_music.mp3',
+        'output_video': 'files/output_video.mp4',
+        'text': 'This is a test video. The narration here is playing along with the backgound music in this video.',
+        'duration': 5
+    }
+    
+    # Temporary files
+    temp_image = "files/temp_image.png"
     temp_audio = "files/temp_narration.mp3"
-    output_video = "files/output_video.mp4"
-
-
-
-
-
-    for f in [input_image, music_file]:
+    temp_subtitles = "files/subtitles.srt"
+    
+    # Check inputs
+    for f in [config['input_image'], config['music_file']]:
         if not os.path.exists(f):
             print(f"Required file {f} not found!")
             return
-        
     
-    text = "This is a test video. The background music is also playing along with this in the background"
-    if process_image(input_image, processed_image, text):
-        if generate_narration(text, temp_audio):
-            create_video(processed_image, music_file, temp_audio, output_video)
+    # Process all components
+    if not process_image(config['input_image'], temp_image, config['text']):
+        return
+    if not generate_narration(config['text'], temp_audio):
+        return
+    if not create_subtitles(config['text'], temp_subtitles):
+        return
+    create_video(temp_image, config['music_file'], temp_audio, temp_subtitles, 
+                config['output_video'], config['duration'])
 
 if __name__ == "__main__":
     main()
